@@ -1,47 +1,31 @@
-from typing import Union, Any
-from datetime import datetime
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from app.utils.auth_utils import ALGORITHM, JWT_SECRET_KEY
-
-import jwt
-from pydantic import ValidationError
+from app.core.config import supabase
 from app.schemas.user import SystemUser
-from app.schemas.token import TokenPayload
 
+# OAuth2 scheme for token extraction
 reuseable_oauth = OAuth2PasswordBearer(
-    tokenUrl="/login",
+    tokenUrl="/auth/login",
     scheme_name="JWT"
 )
 
-
 async def get_current_user(token: str = Depends(reuseable_oauth)) -> SystemUser:
     try:
-        payload = jwt.decode(
-            token, JWT_SECRET_KEY, algorithms=[ALGORITHM]
-        )
-        token_data = TokenPayload(**payload)
-        
-        if datetime.fromtimestamp(token_data.exp) < datetime.now():
+        user = supabase.auth.get_user(token)
+        if not user:
             raise HTTPException(
-                status_code = status.HTTP_401_UNAUTHORIZED,
-                detail="Token expired",
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-    except(jwt.JWTError, ValidationError):
+        
+        email=user.user.email
+        id=user.user.id
+        return SystemUser(email=email, id=id)
+    
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-        
-    user: Union[dict[str, Any], None] = db.get(token_data.sub, None)
-    
-    
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Could not find user",
-        )
-    
-    return SystemUser(**user)
