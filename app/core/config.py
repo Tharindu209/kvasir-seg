@@ -1,4 +1,5 @@
 import os
+import torch
 from typing import List
 
 from dotenv import load_dotenv
@@ -19,8 +20,11 @@ class Configs(BaseSettings):
     supabase_key: str = os.getenv("SUPABASE_KEY")
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY")
     JWT_REFRESH_SECRET_KEY: str = os.getenv("JWT_REFRESH_SECRET_KEY")
-    ORIGINAL_IMAGES_BUCKET: str = "original_images"
-    SEGMENTED_IMAGES_BUCKET: str = "segment_images"
+    MAIN_BUCKET: str = "segment_images"
+    ORIGINAL_IMAGES_PATH: str = "originals"
+    SEGMENTED_IMAGES_PATH: str = "segments"
+    MODEL_PATH: str = os.path.join(os.path.dirname(__file__), "../models/best_model.pth")
+    DEVICE: str = "cuda" if torch.cuda.is_available() else "cpu"
 
     PROJECT_ROOT: str = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
