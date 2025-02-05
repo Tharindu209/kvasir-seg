@@ -1,20 +1,54 @@
-from fastapi import APIRouter, Depends, status, HTTPException
-from app.schemas.user import SystemUser
-from app.core.config import supabase
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
+from app.services.image_services import ImageService
 from app.core.deps import get_current_user
+from app.schemas.user import SystemUser
+from app.core.config import configs
+from typing import List
 
 router = APIRouter(
-    prefix="/upload",
-    tags=["Image OPerations"],
+    prefix="/image",
+    tags=["Image Operations"],
 )
 
-@router.post('/image', summary="Upload image")
-async def upload_image(user: SystemUser = Depends(get_current_user)):
+@router.post("/upload", status_code=status.HTTP_201_CREATED)
+async def upload_image(
+    file: UploadFile = File(...),
+    current_user: SystemUser = Depends(get_current_user)
+):
+    """Upload an original image for processing"""
     try:
-        response = supabase.storage.from_('images').upload('file_name', 'file_path')
-        return {"message": "Image uploaded"}
+        file_bytes = await file.read()
+        return await ImageService.upload_image(file_bytes, file.filename, current_user)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
+            detail=str(e)
         )
+
+@router.delete("/{image_id}")
+async def delete_image(
+    image_id: str,
+    current_user: SystemUser = Depends(get_current_user)
+):
+    """Delete both original and segmented images"""
+    success = await ImageService.delete_image(image_id, current_user)
+    if success:
+        return {"message": "Images deleted successfully"}
+    raise HTTPException(status_code=404, detail="Images not found")
+
+@router.get("/", response_model=List[dict])
+async def list_images(
+    current_user: SystemUser = Depends(get_current_user)
+):
+    """List all images for the current user"""
+    return await ImageService.list_images(current_user)
+
+@router.get("/original/{image_id}")
+async def get_original_image(image_id: str):
+    """Get public URL for original image"""
+    return {"url": ImageService.get_image_url(image_id, configs.MAIN_BUCKET)}
+
+@router.get("/segmented/{image_id}")
+async def get_segmented_image(image_id: str):
+    """Get public URL for segmented image"""
+    return {"url": ImageService.get_image_url(image_id, configs.MAIN_BUCKET)}
