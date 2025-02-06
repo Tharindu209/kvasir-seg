@@ -1,5 +1,6 @@
 import time
-from typing import List, Optional
+from typing import List
+import requests
 from fastapi import HTTPException
 from app.core.config import supabase, configs
 from app.schemas.user import SystemUser
@@ -9,7 +10,6 @@ class ImageService:
     async def upload_image(file_bytes: bytes, filename: str, user: SystemUser) -> dict:
         try:
             file_path = f"{configs.ORIGINAL_IMAGES_PATH}/{filename}"
-            print(file_path)
             res = supabase.storage.from_(configs.MAIN_BUCKET).upload(
                 file=file_bytes,
                 path=file_path,
@@ -44,28 +44,46 @@ class ImageService:
             segmented_files = supabase.storage.from_(configs.MAIN_BUCKET).list(configs.SEGMENTED_IMAGES_PATH)
             
             original_dict = [{
-                "id": f'{configs.ORIGINAL_IMAGES_PATH}/{file['name']}',
-                "original_url": supabase.storage.from_(configs.MAIN_BUCKET).get_public_url(f'{configs.ORIGINAL_IMAGES_PATH}/{file['name']}')
+                "id": f'{configs.ORIGINAL_IMAGES_PATH}/{file["name"]}',
+                "original_url": supabase.storage.from_(configs.MAIN_BUCKET).get_public_url(f'{configs.ORIGINAL_IMAGES_PATH}/{file["name"]}')
             } for file in original_files]
             
             segment_dict = [{
-                "id": f.name,
-                "segmented_url": supabase.storage.from_(configs.MAIN_BUCKET).get_public_url(f['name'])
-            } for f in segmented_files]
+                "id": f'{configs.SEGMENTED_IMAGES_PATH}/{file["name"]}',
+                "segmented_url": supabase.storage.from_(configs.MAIN_BUCKET).get_public_url(f'{configs.SEGMENTED_IMAGES_PATH}/{file["name"]}')
+            } for file in segmented_files]
             
-            print(l)
-            
-            return {}
+            return [
+                {
+                    "original": original_dict,
+                    "segmented": segment_dict
+                }
+            ]
         except Exception as e:
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to list images: {str(e)}"
             )
 
-    @staticmethod
     def get_image_url(image_id: str, bucket: str) -> str:
         try:
-            return supabase.storage.from_(bucket).get_public_url(image_id)
+            res = supabase.storage.from_(bucket).get_public_url(image_id)
+            
+            response = requests.get(res)
+            if response.status_code == 200:
+                return res
+            else:
+                raise Exception(f"Failed to access the image URL: {res}")
+        except:
+            raise HTTPException(
+                status_code=404,
+                detail="Image not found"
+            )
+            
+    def get_the_image(image_id: str, bucket: str) -> bytes:
+        try:
+            res = supabase.storage.from_(bucket).download(image_id)
+            return res
         except:
             raise HTTPException(
                 status_code=404,
