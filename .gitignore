@@ -42,6 +42,7 @@ MANIFEST
 audio_model/
 /data
 
+
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
@@ -66,6 +67,8 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+app/models/best_model.pth
+deepseek.txt
 
 # Translations
 *.mo
