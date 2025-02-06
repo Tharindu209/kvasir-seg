@@ -14,7 +14,6 @@ class Configs(BaseSettings):
     ENV: str = os.getenv("ENV", "dev")
     API: str = "/api"
     PROJECT_NAME: str = "Image-api"
-    # model_path: str = "models/best_model.pth"
     allowed_file_types: list = ["image/jpeg", "image/png", "application/dicom"]
     supabase_url: str = os.getenv("SUPABASE_URL")
     supabase_key: str = os.getenv("SUPABASE_KEY")
