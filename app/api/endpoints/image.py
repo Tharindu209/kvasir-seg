@@ -11,11 +11,7 @@ router = APIRouter(
 )
 
 @router.post("/upload", status_code=status.HTTP_201_CREATED)
-async def upload_image(
-    file: UploadFile = File(...),
-    current_user: SystemUser = Depends(get_current_user)
-):
-    """Upload an original image for processing"""
+async def upload_image( file: UploadFile = File(...), current_user: SystemUser = Depends(get_current_user)):
     try:
         file_bytes = await file.read()
         return await ImageService.upload_image(file_bytes, file.filename, current_user)
@@ -26,29 +22,22 @@ async def upload_image(
         )
 
 @router.delete("/{image_id}")
-async def delete_image(
-    image_id: str,
-    current_user: SystemUser = Depends(get_current_user)
-):
-    """Delete both original and segmented images"""
+async def delete_image(image_id: str,current_user: SystemUser = Depends(get_current_user)):
     success = await ImageService.delete_image(image_id, current_user)
     if success:
         return {"message": "Images deleted successfully"}
     raise HTTPException(status_code=404, detail="Images not found")
 
 @router.get("/", response_model=List[dict])
-async def list_images(
-    current_user: SystemUser = Depends(get_current_user)
-):
-    """List all images for the current user"""
+async def list_images(current_user: SystemUser = Depends(get_current_user)):
     return await ImageService.list_images(current_user)
 
 @router.get("/original/{image_id}")
 async def get_original_image(image_id: str):
-    """Get public URL for original image"""
+    image_id = f"{configs.ORIGINAL_IMAGES_PATH}/{image_id}"
     return {"url": ImageService.get_image_url(image_id, configs.MAIN_BUCKET)}
 
 @router.get("/segmented/{image_id}")
 async def get_segmented_image(image_id: str):
-    """Get public URL for segmented image"""
+    image_id = f"{configs.SEGMENTED_IMAGES_PATH}/{image_id}"
     return {"url": ImageService.get_image_url(image_id, configs.MAIN_BUCKET)}
